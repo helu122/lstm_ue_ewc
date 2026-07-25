@@ -25,7 +25,7 @@ def generate_sine_data(n_samples=1000, seq_len=100, noise_std=0.05):
 # LSTM-AE 模型（已加 MC Dropout）
 # ============================================
 class LSTMAE(nn.Module):
-    def __init__(self, input_dim, hidden_dim, latent_dim, dropout_p=0.5):
+    def __init__(self, input_dim, hidden_dim, latent_dim, dropout_p=0.3):
 
         super().__init__()
         self.dropout_p = dropout_p
@@ -76,7 +76,7 @@ test_data = data_tensor[split:]
 # ============================================
 input_dim = 1
 hidden_dim = 32
-latent_dim = 4
+latent_dim = 8
 model = LSTMAE(input_dim, hidden_dim, latent_dim)
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
