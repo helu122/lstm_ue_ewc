@@ -25,35 +25,38 @@ def generate_sine_data(n_samples=1000, seq_len=100, noise_std=0.05):
 # LSTM-AE 模型（已加 MC Dropout）
 # ============================================
 class LSTMAE(nn.Module):
-    def __init__(self, input_dim, hidden_dim, latent_dim, dropout_p=0.2):
+    def __init__(self, input_dim, hidden_dim, latent_dim, dropout_p=0.3):
         super().__init__()
         self.dropout_p = dropout_p
 
-        # encoder
-        self.encoder_lstm = nn.LSTM(input_dim, hidden_dim, batch_first=True)
+        # encoder — LSTM 自带 dropout 参数
+        self.encoder_lstm = nn.LSTM(input_dim, hidden_dim, batch_first=True,
+                                    dropout=dropout_p)       # ← LSTM 内部 dropout
+        self.enc_drop = nn.Dropout(dropout_p)                # ← fc 前再一层
         self.encoder_fc = nn.Linear(hidden_dim, latent_dim)
-        self.enc_dropout = nn.Dropout(dropout_p)       # ← Encoder 后的 Dropout
 
         # decoder
-        self.decoder_lstm = nn.LSTM(latent_dim, hidden_dim, batch_first=True)
+        self.decoder_lstm = nn.LSTM(latent_dim, hidden_dim, batch_first=True,
+                                    dropout=dropout_p)       # ← LSTM 内部 dropout
+        self.dec_drop = nn.Dropout(dropout_p)                # ← fc 前再一层
         self.output_fc = nn.Linear(hidden_dim, input_dim)
-        self.dec_dropout = nn.Dropout(dropout_p)       # ← Decoder 后的 Dropout
 
     def forward(self, x):
         batch_size, seq_len, _ = x.shape
 
         # Encode
         enc_out, (h_n, c_n) = self.encoder_lstm(x)
-        enc_out = self.enc_dropout(enc_out)            # ← Dropout 注入
-        z = self.encoder_fc(h_n[-1])                   # [batch, latent_dim]
+        z = self.enc_drop(h_n[-1])                           # Dropout 在 fc 之前
+        z = self.encoder_fc(z)                               # [batch, latent_dim]
 
         # Decode
         z_repeated = z.unsqueeze(1).repeat(1, seq_len, 1)
         dec_out, _ = self.decoder_lstm(z_repeated)
-        dec_out = self.dec_dropout(dec_out)            # ← Dropout 注入
-        dec_out = self.output_fc(dec_out)              # [batch, seq_len, input_dim]
+        dec_out = self.dec_drop(dec_out)                     # Dropout 在 fc 之前
+        dec_out = self.output_fc(dec_out)
 
         return dec_out
+
 
 
 # ============================================
